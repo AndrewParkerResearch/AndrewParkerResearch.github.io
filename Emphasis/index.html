@@ -1,0 +1,359 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>Emphasis</title><meta name="generator" content="MATLAB 9.11"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2022-04-26"><meta name="DC.source" content="Emphasis.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h1></h1><!--introduction--><pre>Thinking about the 2 issues of 1. signal to noise in diffusion being
+uneven across frequency causing and over-focus on low frequencies and an
+under-focus on high frequencies and 2. signal to noise in diffusion
+being uneven in relation to level leaving quieter passages under-focused
+and louder passages over-focused. I think I've got a solution to help
+this whilst still using the Gaussian white noise masker as was/is.</pre><!--/introduction--><pre>First, we can address the frequency domain with an emphesis curve using
+the R468 weighting curve, the inverse of which basically describes the
+toanl envelope of music because in a round about way we're mixing to
+invert that curve so the input as far as our ears is perceptually
+flat(ish)
+This should make the magnitude spectrum _closer_ to that of white noise</pre><pre class="codeinput">testNoise = pinknoise(44100,1); <span class="comment">% make 1s pink noise</span>
+<span class="comment">% testNoise = audioread('LargePunchTest\16_122356.wav');</span>
+<span class="comment">% testNoise = testNoise / max(abs(testNoise));</span>
+<span class="comment">% testNoise = testNoise(65000+1:65000+44100); % cut out a 1s section</span>
+
+S = fft(testNoise); <span class="comment">% get spectrum</span>
+mag = abs(S(1:size(testNoise,1)/2 + 1)); <span class="comment">% get real mag spectrum</span>
+phase = angle(S(1:size(testNoise,1)/2 + 1)); <span class="comment">% get phase spectrum for later</span>
+
+fbw = (44100/2) / (size(testNoise,1)/2 + 1); <span class="comment">% bin widths</span>
+fc = 0:fbw:fbw*(size(testNoise,1)/2); <span class="comment">% bin centre frequencies</span>
+
+figure
+semilogx(fc, 20*log10(mag)) <span class="comment">% pink noise spectrum</span>
+xlim([20 20000])
+
+<span class="comment">% w = 2595 * log10(1 + (fc/700)); % mel weight curve</span>
+<span class="comment">% w = 1 + (w / (w(1,1000))); % normalise weights by 1kHz</span>
+w = ITUR468(fc); <span class="comment">% ITU 468 weight curve</span>
+
+figure
+semilogx(fc, 20*log10(w)) <span class="comment">% weighting curve shape</span>
+
+mag_w = mag .* w'; <span class="comment">% weight the pink noise spectrum</span>
+
+whiteNoise = (rand(44100,1) * 2) - 1; <span class="comment">% make 1s uniform white noise for comparison</span>
+wnS = fft(whiteNoise); <span class="comment">% get spectrum</span>
+white_mag = abs(wnS(1:size(whiteNoise,1)/2 + 1)); <span class="comment">% get real mag spectrum</span>
+
+figure
+semilogx(fc, 20*log10(white_mag)) <span class="comment">% White</span>
+hold <span class="string">on</span>
+semilogx(fc, 20*log10(mag)) <span class="comment">% Pink</span>
+semilogx(fc, 20*log10(mag_w)) <span class="comment">% Weighted Pink</span>
+xlim([20 20000])
+
+legend([<span class="string">"White"</span> <span class="string">"Pink"</span> <span class="string">"Weighted Pink"</span>])
+
+WS = mag_w .* exp(1i*phase); <span class="comment">% get complex spect with weighted mag values</span>
+WS(size(testNoise,1)/2 + 1 : size(testNoise,1)) = 0; <span class="comment">% fill in the rest of the values prior to ifft</span>
+y = ifft(WS,<span class="string">'symmetric'</span>); <span class="comment">% ifft for next step</span>
+</pre><img vspace="5" hspace="5" src="Emphasis_01.png" alt=""> <img vspace="5" hspace="5" src="Emphasis_02.png" alt=""> <pre>Now do same frequency weigting on a sample from a song as the next bit
+requires something with dynamics</pre><pre class="codeinput">testNoise = audioread(<span class="string">'LargePunchTest\16_122356.wav'</span>);
+testNoise = testNoise / max(abs(testNoise));
+testNoise = testNoise(65000+1:65000+44100); <span class="comment">% cut out a 1s section</span>
+
+S = fft(testNoise); <span class="comment">% get spectrum</span>
+mag = abs(S(1:size(testNoise,1)/2 + 1)); <span class="comment">% get real mag spectrum</span>
+phase = angle(S(1:size(testNoise,1)/2 + 1)); <span class="comment">% get phase spectrum for later</span>
+
+mag_w = mag .* w'; <span class="comment">% weight the pink noise spectrum</span>
+
+WS = mag_w .* exp(1i*phase); <span class="comment">% get complex spect with weighted mag values</span>
+WS(size(testNoise,1)/2 + 1 : size(testNoise,1)) = 0; <span class="comment">% fill in the rest of the values prior to ifft</span>
+y = ifft(WS,<span class="string">'symmetric'</span>); <span class="comment">% ifft for next step</span>
+</pre><pre>After frequency weighting, we can use mu-law compansion (aka
+softclipping in music terms) to compress the dynamic range and make the
+dynamic envelope more even. PDF shows wider range and std which _i think
+_ shows gauss noise is masking sufficiently</pre><pre class="codeinput"><span class="comment">% y is our frequency emphesised signal</span>
+mu = 2^3-1; <span class="comment">% standard here is 2^8-1 but this seems way too extreme</span>
+companded = sign(y).*(log(1 + mu * abs(y)) / log(1+mu));
+
+figure
+plot(companded)
+hold <span class="string">on</span>
+plot(y)
+plot(testNoise)
+legend([<span class="string">"companded"</span> <span class="string">"Frequency Weighted"</span> <span class="string">"input"</span>])
+
+gauss = randn(44100,1); <span class="comment">% gauss noise for comparison, m = 0 std = 1</span>
+
+<span class="comment">% Compare PDFs</span>
+figure
+histogram(gauss, <span class="string">'Normalization'</span>,<span class="string">'pdf'</span>)
+hold <span class="string">on</span>
+histogram(companded, <span class="string">'Normalization'</span>,<span class="string">'pdf'</span>)
+legend([<span class="string">"gauss"</span> <span class="string">"companded"</span>])
+</pre><img vspace="5" hspace="5" src="Emphasis_03.png" alt=""> <img vspace="5" hspace="5" src="Emphasis_04.png" alt=""> <pre>Following synthesis, this encoding can be inverted losslessly.</pre><pre class="codeinput">iCompanded = sign(companded) .* ((((1 + mu).^abs(companded)) - 1) / mu);
+
+S = fft(iCompanded); <span class="comment">% get spectrum</span>
+mag = abs(S(1:size(iCompanded,1)/2 + 1)); <span class="comment">% get real mag spectrum</span>
+phase = angle(S(1:size(iCompanded,1)/2 + 1)); <span class="comment">% get phase spectrum for later</span>
+
+mag_w = mag ./ w'; <span class="comment">% unweight the pink noise spectrum</span>
+
+figure
+semilogx(fc, 20*log10(white_mag)) <span class="comment">% White</span>
+hold <span class="string">on</span>
+semilogx(fc, 20*log10(mag)) <span class="comment">% Weighted</span>
+semilogx(fc, 20*log10(mag_w)) <span class="comment">% Unweighted</span>
+xlim([20 20000])
+legend([<span class="string">"White"</span> <span class="string">"Weighted"</span> <span class="string">"Unweighted"</span>])
+
+WS = mag_w .* exp(1i*phase); <span class="comment">% get complex spect with weighted mag values</span>
+WS(size(iCompanded,1)/2 + 1 : size(iCompanded,1)) = 0; <span class="comment">% fill in the rest of the values prior to ifft</span>
+invertedProcessing = ifft(WS,<span class="string">'symmetric'</span>); <span class="comment">% ifft for next step</span>
+
+<span class="comment">% inverted processing nulls against original input</span>
+figure
+plot(testNoise - invertedProcessing)
+</pre><img vspace="5" hspace="5" src="Emphasis_05.png" alt=""> <img vspace="5" hspace="5" src="Emphasis_06.png" alt=""> <p>Function to generate the weight curve, you can ignore this</p><pre class="codeinput"><span class="keyword">function</span> r_itu = ITUR468(f)
+<span class="comment">% Largely following https://github.com/cinelexi/itu-r-468-weighting/blob/master/itu_r_468_weighting/constants.py</span>
+    DB_GAIN_1KHZ = 18.246265068039158;
+    FACTOR_GAIN_1KHZ = 10^(DB_GAIN_1KHZ / 20);
+
+    f1 = f;
+    f2 = f1.^2;
+    f3 = f1.^3;
+    f4 = f1.^4;
+    f5 = f1.^5;
+    f6 = f1.^6;
+
+    h1 = ((-4.7373389813783836e-24 * f6) + (2.0438283336061252e-15 * f4) - (1.363894795463638e-07 * f2) + 1);
+    h2 = ((1.3066122574128241e-19 * f5) - (2.1181508875186556e-11 * f3) + (0.0005559488023498643 * f1));
+
+    r_itu = (0.0001246332637532143 * f1) ./ sqrt(h1.^2 + h2.^2) * FACTOR_GAIN_1KHZ;
+<span class="keyword">end</span>
+</pre><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2021b</a><br></p></div><!--
+##### SOURCE BEGIN #####
+%%
+% 
+%  Thinking about the 2 issues of 1. signal to noise in diffusion being
+%  uneven across frequency causing and over-focus on low frequencies and an
+%  under-focus on high frequencies and 2. signal to noise in diffusion
+%  being uneven in relation to level leaving quieter passages under-focused
+%  and louder passages over-focused. I think I've got a solution to help
+%  this whilst still using the Gaussian white noise masker as was/is.
+% 
+
+%%
+% 
+%  First, we can address the frequency domain with an emphesis curve using
+%  the R468 weighting curve, the inverse of which basically describes the
+%  toanl envelope of music because in a round about way we're mixing to
+%  invert that curve so the input as far as our ears is perceptually
+%  flat(ish)
+%  This should make the magnitude spectrum _closer_ to that of white noise
+% 
+
+testNoise = pinknoise(44100,1); % make 1s pink noise
+% testNoise = audioread('LargePunchTest\16_122356.wav');
+% testNoise = testNoise / max(abs(testNoise));
+% testNoise = testNoise(65000+1:65000+44100); % cut out a 1s section
+
+S = fft(testNoise); % get spectrum
+mag = abs(S(1:size(testNoise,1)/2 + 1)); % get real mag spectrum
+phase = angle(S(1:size(testNoise,1)/2 + 1)); % get phase spectrum for later
+
+fbw = (44100/2) / (size(testNoise,1)/2 + 1); % bin widths
+fc = 0:fbw:fbw*(size(testNoise,1)/2); % bin centre frequencies
+
+figure
+semilogx(fc, 20*log10(mag)) % pink noise spectrum
+xlim([20 20000])
+
+% w = 2595 * log10(1 + (fc/700)); % mel weight curve
+% w = 1 + (w / (w(1,1000))); % normalise weights by 1kHz
+w = ITUR468(fc); % ITU 468 weight curve
+
+figure
+semilogx(fc, 20*log10(w)) % weighting curve shape
+
+mag_w = mag .* w'; % weight the pink noise spectrum
+
+whiteNoise = (rand(44100,1) * 2) - 1; % make 1s uniform white noise for comparison
+wnS = fft(whiteNoise); % get spectrum
+white_mag = abs(wnS(1:size(whiteNoise,1)/2 + 1)); % get real mag spectrum
+
+figure
+semilogx(fc, 20*log10(white_mag)) % White
+hold on
+semilogx(fc, 20*log10(mag)) % Pink
+semilogx(fc, 20*log10(mag_w)) % Weighted Pink
+xlim([20 20000])
+
+legend(["White" "Pink" "Weighted Pink"])
+
+WS = mag_w .* exp(1i*phase); % get complex spect with weighted mag values
+WS(size(testNoise,1)/2 + 1 : size(testNoise,1)) = 0; % fill in the rest of the values prior to ifft
+y = ifft(WS,'symmetric'); % ifft for next step
+
+%%
+% 
+%  Now do same frequency weigting on a sample from a song as the next bit
+%  requires something with dynamics
+% 
+
+testNoise = audioread('LargePunchTest\16_122356.wav');
+testNoise = testNoise / max(abs(testNoise));
+testNoise = testNoise(65000+1:65000+44100); % cut out a 1s section
+
+S = fft(testNoise); % get spectrum
+mag = abs(S(1:size(testNoise,1)/2 + 1)); % get real mag spectrum
+phase = angle(S(1:size(testNoise,1)/2 + 1)); % get phase spectrum for later
+
+mag_w = mag .* w'; % weight the pink noise spectrum
+
+WS = mag_w .* exp(1i*phase); % get complex spect with weighted mag values
+WS(size(testNoise,1)/2 + 1 : size(testNoise,1)) = 0; % fill in the rest of the values prior to ifft
+y = ifft(WS,'symmetric'); % ifft for next step
+
+%%
+% 
+%  After frequency weighting, we can use mu-law compansion (aka
+%  softclipping in music terms) to compress the dynamic range and make the
+%  dynamic envelope more even. PDF shows wider range and std which _i think
+%  _ shows gauss noise is masking sufficiently
+% 
+
+% y is our frequency emphesised signal
+mu = 2^3-1; % standard here is 2^8-1 but this seems way too extreme
+companded = sign(y).*(log(1 + mu * abs(y)) / log(1+mu));
+
+figure
+plot(companded)
+hold on
+plot(y)
+plot(testNoise)
+legend(["companded" "Frequency Weighted" "input"])
+
+gauss = randn(44100,1); % gauss noise for comparison, m = 0 std = 1
+
+% Compare PDFs
+figure
+histogram(gauss, 'Normalization','pdf')
+hold on
+histogram(companded, 'Normalization','pdf')
+legend(["gauss" "companded"])
+
+%%
+% 
+%  Following synthesis, this encoding can be inverted losslessly.
+% 
+
+iCompanded = sign(companded) .* ((((1 + mu).^abs(companded)) - 1) / mu);
+
+S = fft(iCompanded); % get spectrum
+mag = abs(S(1:size(iCompanded,1)/2 + 1)); % get real mag spectrum
+phase = angle(S(1:size(iCompanded,1)/2 + 1)); % get phase spectrum for later
+
+mag_w = mag ./ w'; % unweight the pink noise spectrum
+
+figure
+semilogx(fc, 20*log10(white_mag)) % White
+hold on
+semilogx(fc, 20*log10(mag)) % Weighted
+semilogx(fc, 20*log10(mag_w)) % Unweighted
+xlim([20 20000])
+legend(["White" "Weighted" "Unweighted"])
+
+WS = mag_w .* exp(1i*phase); % get complex spect with weighted mag values
+WS(size(iCompanded,1)/2 + 1 : size(iCompanded,1)) = 0; % fill in the rest of the values prior to ifft
+invertedProcessing = ifft(WS,'symmetric'); % ifft for next step
+
+% inverted processing nulls against original input 
+figure
+plot(testNoise - invertedProcessing)
+
+
+%% 
+% Function to generate the weight curve, you can ignore this
+function r_itu = ITUR468(f)
+% Largely following https://github.com/cinelexi/itu-r-468-weighting/blob/master/itu_r_468_weighting/constants.py
+    DB_GAIN_1KHZ = 18.246265068039158;
+    FACTOR_GAIN_1KHZ = 10^(DB_GAIN_1KHZ / 20);
+
+    f1 = f;
+    f2 = f1.^2;
+    f3 = f1.^3;
+    f4 = f1.^4;
+    f5 = f1.^5;
+    f6 = f1.^6;
+
+    h1 = ((-4.7373389813783836e-24 * f6) + (2.0438283336061252e-15 * f4) - (1.363894795463638e-07 * f2) + 1);
+    h2 = ((1.3066122574128241e-19 * f5) - (2.1181508875186556e-11 * f3) + (0.0005559488023498643 * f1));
+
+    r_itu = (0.0001246332637532143 * f1) ./ sqrt(h1.^2 + h2.^2) * FACTOR_GAIN_1KHZ;
+end
+##### SOURCE END #####
+--></body></html>
